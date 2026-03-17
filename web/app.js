@@ -13,6 +13,12 @@ const resultPreview = document.getElementById("resultPreview");
 const healthStatus = document.getElementById("healthStatus");
 const healthText = healthStatus.querySelector(".status-text");
 
+const RAW_API_BASE = (window.PIXEL_API_URL || "").trim();
+const API_BASE = RAW_API_BASE.startsWith("__PIXEL_API_URL__")
+  ? ""
+  : RAW_API_BASE.replace(/\/+$/, "");
+const IS_OSC_ABI_MODE = API_BASE.length > 0;
+
 let selectedFile = null;
 let originalPreviewUrl = "";
 let resultPreviewUrl = "";
@@ -66,32 +72,10 @@ generateBtn.addEventListener("click", async () => {
   setLoading(true);
 
   try {
-    const params = new URLSearchParams({
-      pixel_size: pixelSizeInput.value,
-      color_levels: colorLevelsInput.value,
-    });
+    const blob = IS_OSC_ABI_MODE
+      ? await generateViaOscAbi(selectedFile)
+      : await generateViaLocalApi(selectedFile);
 
-    const response = await fetch(`/pixelate?${params.toString()}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": selectedFile.type || "application/octet-stream",
-      },
-      body: selectedFile,
-    });
-
-    if (!response.ok) {
-      let reason = `Request failed with status ${response.status}`;
-      const responseType = response.headers.get("content-type") || "";
-      if (responseType.includes("application/json")) {
-        const errorPayload = await response.json();
-        if (errorPayload && errorPayload.error) {
-          reason = errorPayload.error;
-        }
-      }
-      throw new Error(reason);
-    }
-
-    const blob = await response.blob();
     if (!blob || blob.size === 0) {
       throw new Error("Backend returned an empty image.");
     }
@@ -115,15 +99,97 @@ generateBtn.addEventListener("click", async () => {
   }
 });
 
+async function generateViaLocalApi(file) {
+  const params = new URLSearchParams({
+    pixel_size: pixelSizeInput.value,
+    color_levels: colorLevelsInput.value,
+  });
+
+  const response = await fetch(`/pixelate?${params.toString()}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractError(response));
+  }
+
+  return response.blob();
+}
+
+async function generateViaOscAbi(file) {
+  const imageBase64 = await fileToBase64(file);
+  const payload = {
+    image_base64: imageBase64,
+    pixel_size: Number(pixelSizeInput.value),
+    color_levels: Number(colorLevelsInput.value),
+  };
+
+  const response = await fetch(`${API_BASE}/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractError(response));
+  }
+
+  const bodyText = await response.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    throw new Error("OSC endpoint returned non-JSON response.");
+  }
+
+  if (parsed.error) {
+    throw new Error(parsed.error);
+  }
+
+  if (!parsed.image_base64) {
+    throw new Error("OSC response did not include image_base64.");
+  }
+
+  const outputBytes = base64ToUint8Array(parsed.image_base64);
+  return new Blob([outputBytes], { type: "image/png" });
+}
+
 async function updateHealthStatus() {
   try {
-    const response = await fetch("/health", { method: "GET" });
-    if (!response.ok) {
-      throw new Error();
+    if (IS_OSC_ABI_MODE) {
+      const response = await fetch(`${API_BASE}/`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "health" }),
+      });
+
+      if (!response.ok) {
+        throw new Error();
+      }
+
+      const text = await response.text();
+      const payload = JSON.parse(text);
+      if (payload.status !== "ok") {
+        throw new Error();
+      }
+    } else {
+      const response = await fetch("/health", { method: "GET" });
+      if (!response.ok) {
+        throw new Error();
+      }
     }
+
     healthStatus.classList.remove("error");
     healthStatus.classList.add("ok");
-    healthText.textContent = "Backend is healthy";
+    healthText.textContent = IS_OSC_ABI_MODE
+      ? "OSC backend is healthy"
+      : "Backend is healthy";
   } catch {
     healthStatus.classList.remove("ok");
     healthStatus.classList.add("error");
@@ -178,6 +244,48 @@ function hideResult() {
   resultState.textContent = "Upload an image and click generate.";
   downloadBtn.classList.add("hidden");
   downloadBtn.removeAttribute("href");
+}
+
+function base64ToUint8Array(base64) {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let index = 0; index < binaryString.length; index += 1) {
+    bytes[index] = binaryString.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      const commaIndex = dataUrl.indexOf(",");
+      if (commaIndex === -1) {
+        reject(new Error("Could not read selected image."));
+        return;
+      }
+      resolve(dataUrl.slice(commaIndex + 1));
+    };
+    reader.onerror = () => reject(new Error("Could not read selected image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function extractError(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const payload = await response.json().catch(() => null);
+    if (payload?.error) {
+      return payload.error;
+    }
+    if (payload?.message) {
+      return payload.message;
+    }
+  }
+
+  const text = await response.text();
+  return text || `Request failed with status ${response.status}`;
 }
 
 updateHealthStatus();

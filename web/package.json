@@ -1,0 +1,9 @@
+{
+  "name": "pixel-art-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static UI server for Pixel Art Generator",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

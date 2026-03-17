@@ -161,3 +161,15 @@ Then open `http://127.0.0.1:8080`.
 - Outbound URL processing depends on `allowed_outbound_hosts` in `spin.toml`.
 - Multipart parsing is intentionally skipped to keep the backend small and robust; UI sends raw image bytes directly.
 - For OSC My Apps `type=wasm`, this repository includes a root-level `app.wasm` artifact because that deployment flow currently scans the repo for a `.wasm` file and does not run `spin build`.
+
+## OSC separate frontend app (option 1)
+
+To show the UI on OSC, deploy `web/` as a separate Node.js My App and point it at the WASM endpoint:
+
+- `web/server.js` serves `index.html`, `styles.css`, `app.js`
+- It injects `PIXEL_API_URL` into the page (default: `https://9a3839875b.apps.osaas.io`)
+- `web/app.js` auto-detects OSC mode and calls the WASM root route using `text/plain` JSON payloads
+
+If you want to revert this setup later:
+- Delete the frontend My App instance from OSC
+- Revert git commits that introduced `web/server.js`, `web/package.json`, and OSC frontend-mode changes
