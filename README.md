@@ -58,9 +58,9 @@ When deployed as `type=wasm` on OSC My Apps (`eyevinn-wasm-runner`), the platfor
 Supported root-body behavior in `src/bin/osc_abi.rs`:
 - Empty body -> JSON health response
 - JSON body `{ \"action\": \"health\" }` -> JSON health response
-- Raw image bytes body -> PNG pixelated result (default options)
+- Raw image bytes body -> JSON with base64 output image (`image_base64`)
 - JSON body with base64 image:
-  - `{ \"image_base64\": \"...\", \"pixel_size\": 10, \"color_levels\": 4 }`
+  - `{ \"image_base64\": \"...\", \"pixel_size\": 10, \"color_levels\": 4 }` -> JSON with base64 output image
 
 ## UI features
 

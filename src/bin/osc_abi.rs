@@ -89,7 +89,12 @@ fn handle_json(body: &[u8]) -> Vec<u8> {
 
 fn process_image(image_bytes: &[u8], options: PixelateOptions) -> Vec<u8> {
     match pixelate_to_png(image_bytes, options) {
-        Ok(png) => png,
+        Ok(png) => json!({
+            "status": "ok",
+            "image_base64": base64::engine::general_purpose::STANDARD.encode(png)
+        })
+        .to_string()
+        .into_bytes(),
         Err(err) => error_json(&format!("image processing failed: {err}")).into_bytes(),
     }
 }
