@@ -46,6 +46,22 @@ Why this is practical for an intern project:
     - `color_levels`: `2..8`
   - Output: PNG bytes (`content-type: image/png`)
 
+## OSC My Apps WASM ABI mode
+
+When deployed as `type=wasm` on OSC My Apps (`eyevinn-wasm-runner`), the platform runs a WASI command module and uses a stdin/stdout request contract at the root route.
+
+- Route used by runner: `/`
+- Request body is passed to WASM `stdin`
+- WASM `stdout` is returned as response body
+- In this mode, `/health` and `/pixelate` routes are not guaranteed by the runner
+
+Supported root-body behavior in `src/bin/osc_abi.rs`:
+- Empty body -> JSON health response
+- JSON body `{ \"action\": \"health\" }` -> JSON health response
+- Raw image bytes body -> PNG pixelated result (default options)
+- JSON body with base64 image:
+  - `{ \"image_base64\": \"...\", \"pixel_size\": 10, \"color_levels\": 4 }`
+
 ## UI features
 
 - Image upload with validation
@@ -76,6 +92,10 @@ Build:
 ```bash
 cd /Users/vincentkumar/Documents/GitHub/EyevinnWASM
 cargo build --target wasm32-wasip1 --release
+
+# Build OSC ABI-compatible artifact and update root app.wasm
+cargo build --bin osc_abi --target wasm32-wasip1 --release
+cp target/wasm32-wasip1/release/osc_abi.wasm app.wasm
 ```
 
 Run:
