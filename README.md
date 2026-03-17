@@ -140,3 +140,4 @@ Then open `http://127.0.0.1:8080`.
 - HTTP serving is via Spin's WASI HTTP runtime.
 - Outbound URL processing depends on `allowed_outbound_hosts` in `spin.toml`.
 - Multipart parsing is intentionally skipped to keep the backend small and robust; UI sends raw image bytes directly.
+- For OSC My Apps `type=wasm`, this repository includes a root-level `app.wasm` artifact because that deployment flow currently scans the repo for a `.wasm` file and does not run `spin build`.
