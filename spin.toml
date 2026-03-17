@@ -1,0 +1,18 @@
+spin_manifest_version = 2
+
+[application]
+name = "pixel-art-generator"
+version = "0.1.0"
+description = "Rust + WASI pixel art HTTP service"
+
+[[trigger.http]]
+route = "/..."
+component = "pixel-art-generator"
+
+[component.pixel-art-generator]
+source = "target/wasm32-wasip1/release/pixel_art_generator.wasm"
+allowed_outbound_hosts = ["http://*:*", "https://*:*"]
+
+[component.pixel-art-generator.build]
+command = "cargo build --target wasm32-wasip1 --release"
+watch = ["src/**/*.rs", "web/**", "Cargo.toml"]

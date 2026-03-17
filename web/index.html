@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Art Generator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <h1>Pixel Art Generator</h1>
+        <p>
+          Upload an image, apply quick pixelation + palette reduction, and download a PNG result.
+        </p>
+        <div class="status" id="healthStatus" aria-live="polite">
+          <span class="status-dot"></span>
+          <span class="status-text">Checking backend...</span>
+        </div>
+      </header>
+
+      <section class="panel" aria-label="Pixel art controls">
+        <div class="field">
+          <label for="imageInput">Upload image</label>
+          <input id="imageInput" type="file" accept="image/*" />
+        </div>
+
+        <div class="controls-grid">
+          <div class="field">
+            <label for="pixelSize">Pixelation amount</label>
+            <input id="pixelSize" type="range" min="2" max="64" value="10" />
+            <div class="hint"><span id="pixelSizeValue">10</span> px blocks</div>
+          </div>
+
+          <div class="field">
+            <label for="colorLevels">Color depth</label>
+            <input id="colorLevels" type="range" min="2" max="8" value="4" />
+            <div class="hint"><span id="colorLevelsValue">4</span> levels per channel</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="generateBtn" type="button">Generate Pixel Art</button>
+          <a id="downloadBtn" class="button secondary hidden" href="#" download="pixel-art.png">
+            Download PNG
+          </a>
+        </div>
+
+        <p id="errorMessage" class="error hidden" role="alert"></p>
+      </section>
+
+      <section class="preview-grid" aria-label="Image previews">
+        <article class="preview-card">
+          <h2>Original</h2>
+          <div class="preview-box empty" id="originalState">No image selected yet.</div>
+          <img id="originalPreview" class="hidden preview-image" alt="Original upload preview" />
+        </article>
+
+        <article class="preview-card">
+          <h2>Pixel Art Result</h2>
+          <div class="preview-box empty" id="resultState">Upload an image and click generate.</div>
+          <img id="resultPreview" class="hidden preview-image" alt="Pixelated output preview" />
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
